@@ -469,11 +469,16 @@ def main():
     telegram_app.add_handler(MessageHandler(filters.Document.PDF, bot.handle_document))
     telegram_app.add_handler(CallbackQueryHandler(bot.handle_callback_query))
     
+    # Initialize the application first
+    async def initialize_and_setup():
+        await telegram_app.initialize()
+        await setup_webhook()
+    
     # Setup webhook in a separate thread
     def setup_webhook_thread():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(setup_webhook())
+        loop.run_until_complete(initialize_and_setup())
     
     # Start webhook setup in background
     webhook_thread = threading.Thread(target=setup_webhook_thread)
