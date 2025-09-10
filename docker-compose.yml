@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: bankbot_db
+      POSTGRES_USER: bankbot_user
+      POSTGRES_PASSWORD: your_secure_password_here
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bankbot_user -d bankbot_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  bot:
+    build: .
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABASE_URL=postgresql://bankbot_user:your_secure_password_here@postgres:5432/bankbot_db
+      - DEBUG=False
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+volumes:
+  postgres_data:
