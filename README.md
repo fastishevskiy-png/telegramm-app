@@ -6,15 +6,16 @@ A powerful Telegram bot that analyzes PDF bank statements using OpenAI GPT-4 to 
 
 ### 📄 **Smart PDF Processing**
 - Upload bank statement PDFs directly in Telegram (up to 50MB)
-- Advanced text extraction using PyPDF2
-- Support for most major bank statement formats
+- OpenAI Vision API converts PDF pages to images for analysis
+- Supports both text-based and scanned PDF statements
 - Automatic file cleanup after processing for privacy
 
-### 🤖 **AI-Powered Transaction Analysis**
-- Uses OpenAI GPT-4 for intelligent transaction extraction
+### 🤖 **AI-Powered Visual Analysis**
+- Uses OpenAI GPT-4o Vision API for direct PDF image processing
+- No text extraction needed - analyzes PDF pages as images
+- Intelligent transaction extraction from ACCOUNT ACTIVITY sections
 - Automatic categorization (groceries, utilities, entertainment, etc.)
-- Extracts dates, descriptions, amounts, and balances
-- Handles various bank statement formats and layouts
+- Handles scanned PDFs and various bank statement formats
 
 ### 📊 **Recurring Payment Detection**
 - Identifies subscription services, utilities, and recurring charges
@@ -189,10 +190,10 @@ PORT=8000
 - File upload processing workflow
 
 #### **PDF Parser (pdf_parser.py)**
-- PDF text extraction using PyPDF2
-- OpenAI GPT-4 integration for transaction parsing
-- Recurring payment pattern analysis
-- Smart categorization and formatting
+- PDF to image conversion using pdf2image
+- OpenAI GPT-4o Vision API for direct image analysis
+- Specialized parsing for ACCOUNT ACTIVITY sections
+- Smart categorization and transaction extraction
 
 #### **Database Layer (database.py)**
 - SQLAlchemy ORM models
@@ -221,7 +222,8 @@ The project includes several automation scripts for easy deployment:
 
 - **Python 3.11** specified in runtime.txt (3.13+ has dependency issues)
 - **SQLAlchemy 2.0.35+** required for modern Python compatibility
-- **pypdf 4.3.1+** for robust PDF parsing (replaces PyPDF2)
+- **pdf2image + Pillow** for PDF to image conversion
+- **OpenAI GPT-4o Vision API** for direct PDF image analysis
 - **psycopg2-binary** used instead of asyncpg for reliability
 - **All dependencies tested** with Python 3.11 and modern deployment platforms
 
@@ -297,11 +299,11 @@ The project includes several automation scripts for easy deployment:
 ## ⚠️ Limitations & Requirements
 
 ### PDF Requirements
-- **Text-based PDFs only** (not image-only scans)
+- **Both text-based and scanned PDFs** supported (thanks to Vision API)
 - **Maximum file size**: 50MB
-- **Unencrypted PDFs** (password-protected files not supported)
 - **Valid PDF format** (corrupted files will be rejected)
-- **Supported formats**: Most major bank statement formats
+- **Clear, readable statements** (avoid blurry or low-quality scans)
+- **Standard bank statement format** with ACCOUNT ACTIVITY section
 - **Language**: English statements work best
 
 ### Technical Requirements
