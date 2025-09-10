@@ -337,8 +337,23 @@ What would you like to do next?
 
 def main() -> None:
     """Start the bot."""
-    # Create database tables
-    create_tables()
+    # Check required environment variables
+    if not Config.TELEGRAM_BOT_TOKEN:
+        logger.error("TELEGRAM_BOT_TOKEN environment variable is not set!")
+        return
+    
+    if not Config.OPENAI_API_KEY:
+        logger.error("OPENAI_API_KEY environment variable is not set!")
+        return
+    
+    # Create database tables with error handling
+    try:
+        create_tables()
+        logger.info("Database tables created successfully")
+    except Exception as e:
+        logger.error(f"Failed to create database tables: {e}")
+        logger.error("Please check your DATABASE_URL environment variable")
+        return
     
     # Create bot instance
     bot = BankStatementBot()
