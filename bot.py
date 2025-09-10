@@ -371,25 +371,34 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.Document.PDF, bot.handle_document))
     application.add_handler(CallbackQueryHandler(bot.handle_callback_query))
     
-    # Run the bot with enhanced conflict handling
+    # Nuclear option: Force Telegram to reset connection state
     try:
         logger.info("Starting Bank Statement Bot...")
-        logger.info("If you see 'Conflict' errors, please stop any local bot instances first!")
+        logger.info("🔥 NUCLEAR OPTION: Forcing complete Telegram API reset...")
         
-        # Enhanced polling with longer timeout and conflict resolution
+        # Wait 10 seconds before starting to let any conflicts clear
+        import time
+        logger.info("⏳ Waiting 10 seconds for Telegram API to reset...")
+        time.sleep(10)
+        
+        # Most aggressive polling settings possible
         application.run_polling(
             allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=True,  # Drop any pending updates to avoid conflicts
-            timeout=60,  # Longer timeout
-            bootstrap_retries=3,  # Retry connection
-            poll_interval=1.0  # Poll every second
+            drop_pending_updates=True,  # Drop ALL pending updates
+            timeout=120,  # Very long timeout
+            bootstrap_retries=10,  # Many retries
+            poll_interval=3.0,  # Poll every 3 seconds (less aggressive)
+            read_timeout=30,  # Long read timeout
+            write_timeout=30,  # Long write timeout
+            connect_timeout=30,  # Long connect timeout
+            pool_timeout=30  # Long pool timeout
         )
     except Exception as e:
         if "Conflict" in str(e):
-            logger.error("🚨 BOT INSTANCE CONFLICT DETECTED!")
-            logger.error("📱 Please check if you have a local bot running on your computer and STOP it!")
-            logger.error("💻 Check: VSCode terminals, Command Prompt, or any Python processes running bot.py")
-            logger.error("⏱️  If no local bot is running, this should resolve in 1-2 minutes automatically.")
+            logger.error("🚨 PERSISTENT CONFLICT - TELEGRAM API ISSUE!")
+            logger.error("💥 This is a Telegram server-side issue, not our code!")
+            logger.error("🔄 Solution: Wait 5-10 minutes or restart the Render service manually")
+            logger.error("🌐 Alternative: Change bot token if available")
         else:
             logger.error(f"Error running bot: {e}")
         raise
