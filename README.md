@@ -210,10 +210,19 @@ PORT=8000
 The project includes several automation scripts for easy deployment:
 
 - **`docker-compose.yml`** - Complete Docker setup with PostgreSQL
-- **`Dockerfile`** - Production-ready container configuration
+- **`Dockerfile`** - Production-ready container configuration  
+- **`runtime.txt`** - Python version specification for Render/Heroku
+- **`.python-version`** - Python version for pyenv and other tools
 - **`deploy.ps1`** - PowerShell deployment automation
 - **`github_push.bat`** - Git automation for Windows
 - **`quick_push.cmd`** - Fast commit and push workflow
+
+### Compatibility Notes
+
+- **Python 3.11** specified in runtime.txt (3.13+ has dependency issues)
+- **SQLAlchemy 2.0.35+** required for modern Python compatibility
+- **psycopg2-binary** used instead of asyncpg for reliability
+- **All dependencies tested** with Python 3.11 and modern deployment platforms
 
 ## 💾 Database Schema
 
@@ -327,9 +336,10 @@ The project includes several automation scripts for easy deployment:
    - ✅ Check application logs for errors
 
 5. **Deployment build failures**
-   - ✅ Ensure Python 3.11 is specified in runtime.txt
+   - ✅ Ensure Python 3.11 is specified in runtime.txt and .python-version
    - ✅ Check dependency compatibility in requirements.txt
-   - ✅ Avoid Python 3.13+ due to asyncpg/pydantic compatibility issues
+   - ✅ Use SQLAlchemy 2.0.35+ for Python 3.13 compatibility
+   - ✅ Avoid Python 3.13+ due to various dependency compatibility issues
    - ✅ Use psycopg2-binary instead of asyncpg for PostgreSQL
 
 ### Debug Commands
