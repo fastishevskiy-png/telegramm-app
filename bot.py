@@ -363,19 +363,7 @@ def main() -> None:
     # Create the Application with better error handling
     application = Application.builder().token(Config.TELEGRAM_BOT_TOKEN).build()
     
-    # Clear any existing webhooks to prevent conflicts
-    async def clear_webhook():
-        try:
-            await application.bot.delete_webhook(drop_pending_updates=True)
-            logger.info("Webhook cleared successfully")
-        except Exception as e:
-            logger.warning(f"Could not clear webhook: {e}")
-    
-    import asyncio
-    try:
-        asyncio.run(clear_webhook())
-    except Exception as e:
-        logger.warning(f"Webhook clearing failed: {e}")
+    # Clear any existing webhooks to prevent conflicts (will be done when bot starts)
     
     # Add handlers
     application.add_handler(CommandHandler("start", bot.start))
@@ -388,8 +376,7 @@ def main() -> None:
         logger.info("Starting Bank Statement Bot...")
         application.run_polling(
             allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=True,  # Drop any pending updates to avoid conflicts
-            close_loop=False
+            drop_pending_updates=True  # Drop any pending updates to avoid conflicts
         )
     except Exception as e:
         if "Conflict" in str(e):
