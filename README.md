@@ -221,6 +221,7 @@ The project includes several automation scripts for easy deployment:
 
 - **Python 3.11** specified in runtime.txt (3.13+ has dependency issues)
 - **SQLAlchemy 2.0.35+** required for modern Python compatibility
+- **pypdf 4.3.1+** for robust PDF parsing (replaces PyPDF2)
 - **psycopg2-binary** used instead of asyncpg for reliability
 - **All dependencies tested** with Python 3.11 and modern deployment platforms
 
@@ -298,6 +299,8 @@ The project includes several automation scripts for easy deployment:
 ### PDF Requirements
 - **Text-based PDFs only** (not image-only scans)
 - **Maximum file size**: 50MB
+- **Unencrypted PDFs** (password-protected files not supported)
+- **Valid PDF format** (corrupted files will be rejected)
 - **Supported formats**: Most major bank statement formats
 - **Language**: English statements work best
 
@@ -314,8 +317,9 @@ The project includes several automation scripts for easy deployment:
 1. **"Error extracting text from PDF"**
    - ✅ Ensure PDF contains readable text (not scanned images)
    - ✅ Try a different statement format or bank
-   - ✅ Check if PDF is password protected
-   - ✅ Verify file is not corrupted
+   - ✅ Check if PDF is password protected (remove password first)
+   - ✅ Verify file is not corrupted or incomplete
+   - ✅ Re-download PDF from your bank if issues persist
 
 2. **"Error parsing with OpenAI"**
    - ✅ Check OpenAI API key validity
