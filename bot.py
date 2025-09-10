@@ -388,8 +388,20 @@ def webhook():
             update_dict = request.get_json(force=True)
             update = Update.de_json(update_dict, telegram_app.bot)
             
-            # Process update asynchronously
-            asyncio.create_task(telegram_app.process_update(update))
+            # Process update in a separate thread with its own event loop
+            def process_update():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(telegram_app.process_update(update))
+                finally:
+                    loop.close()
+            
+            # Run in background thread
+            import threading
+            thread = threading.Thread(target=process_update)
+            thread.daemon = True
+            thread.start()
             
             return Response('OK', status=200)
         except Exception as e:
