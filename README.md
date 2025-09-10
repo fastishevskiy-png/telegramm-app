@@ -56,7 +56,7 @@ A powerful Telegram bot that analyzes PDF bank statements using OpenAI GPT-4 to 
 
 ## 📋 Prerequisites
 
-- **Python 3.11+** - Core runtime environment
+- **Python 3.11** - Specified in runtime.txt (3.13+ has compatibility issues)
 - **PostgreSQL database** - For transaction storage
 - **Telegram Bot Token** - Get from @BotFather on Telegram
 - **OpenAI API Key** - For GPT-4 transaction analysis
@@ -296,7 +296,7 @@ The project includes several automation scripts for easy deployment:
 - **Internet connection** required for OpenAI API
 - **PostgreSQL database** for data storage
 - **Valid API keys** for Telegram and OpenAI
-- **Python 3.11+** runtime environment
+- **Python 3.11** runtime environment (specified in runtime.txt)
 
 ## 🔧 Troubleshooting
 
@@ -325,6 +325,12 @@ The project includes several automation scripts for easy deployment:
    - ✅ Check bot permissions with @BotFather
    - ✅ Ensure bot is not stopped or rate-limited
    - ✅ Check application logs for errors
+
+5. **Deployment build failures**
+   - ✅ Ensure Python 3.11 is specified in runtime.txt
+   - ✅ Check dependency compatibility in requirements.txt
+   - ✅ Avoid Python 3.13+ due to asyncpg/pydantic compatibility issues
+   - ✅ Use psycopg2-binary instead of asyncpg for PostgreSQL
 
 ### Debug Commands
 
