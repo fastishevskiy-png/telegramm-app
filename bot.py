@@ -235,8 +235,9 @@ class BankStatementBot:
             # Get file from Telegram
             file = await context.bot.get_file(document.file_id)
             
-            # Create temporary file path
-            temp_file_path = f"/tmp/{document.file_name}"
+            # Create temporary file path (use current directory for Render)
+            import tempfile
+            temp_file_path = f"./{document.file_name}"
             
             # Download file
             await file.download_to_drive(temp_file_path)
@@ -394,13 +395,19 @@ def webhook():
                 asyncio.set_event_loop(loop)
                 try:
                     loop.run_until_complete(telegram_app.process_update(update))
+                except Exception as e:
+                    logger.error(f"Error processing update: {e}")
                 finally:
+                    # Don't close the loop immediately, let pending tasks finish
+                    pending = asyncio.all_tasks(loop)
+                    if pending:
+                        loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
                     loop.close()
             
             # Run in background thread
             import threading
             thread = threading.Thread(target=process_update)
-            thread.daemon = True
+            thread.daemon = False  # Don't make it daemon so it completes
             thread.start()
             
             return Response('OK', status=200)
