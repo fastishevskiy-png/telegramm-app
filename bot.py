@@ -358,7 +358,7 @@ def main() -> None:
     # Create bot instance
     bot = BankStatementBot()
     
-    # Create the Application
+    # Create the Application with better error handling
     application = Application.builder().token(Config.TELEGRAM_BOT_TOKEN).build()
     
     # Add handlers
@@ -367,9 +367,21 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.Document.PDF, bot.handle_document))
     application.add_handler(CallbackQueryHandler(bot.handle_callback_query))
     
-    # Run the bot until the user presses Ctrl-C
-    logger.info("Starting Bank Statement Bot...")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    # Run the bot with error handling for conflicts
+    try:
+        logger.info("Starting Bank Statement Bot...")
+        application.run_polling(
+            allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=True,  # Drop any pending updates to avoid conflicts
+            close_loop=False
+        )
+    except Exception as e:
+        if "Conflict" in str(e):
+            logger.error("Bot instance conflict detected. This usually resolves automatically in 1-2 minutes.")
+            logger.error("If the issue persists, check if another bot instance is running.")
+        else:
+            logger.error(f"Error running bot: {e}")
+        raise
 
 if __name__ == '__main__':
     main()
