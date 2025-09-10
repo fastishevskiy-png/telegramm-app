@@ -1,4 +1,4 @@
-import PyPDF2
+import pypdf
 import openai
 import json
 import re
@@ -27,15 +27,39 @@ class PDFParser:
         """Extract text content from PDF file"""
         try:
             with open(pdf_path, 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
+                pdf_reader = pypdf.PdfReader(file)
                 text = ""
                 
-                for page in pdf_reader.pages:
-                    text += page.extract_text() + "\n"
+                # Check if PDF is encrypted
+                if pdf_reader.is_encrypted:
+                    raise Exception("PDF is password protected. Please provide an unencrypted PDF.")
+                
+                # Extract text from all pages
+                for page_num, page in enumerate(pdf_reader.pages):
+                    try:
+                        page_text = page.extract_text()
+                        if page_text.strip():  # Only add non-empty pages
+                            text += page_text + "\n"
+                    except Exception as page_error:
+                        # Log page error but continue with other pages
+                        print(f"Warning: Could not extract text from page {page_num + 1}: {page_error}")
+                        continue
+                
+                # Check if we extracted any text
+                if not text.strip():
+                    raise Exception("No readable text found in PDF. This might be a scanned document or image-only PDF.")
                 
                 return text.strip()
+                
         except Exception as e:
-            raise Exception(f"Error extracting text from PDF: {str(e)}")
+            # Provide more helpful error messages
+            error_msg = str(e)
+            if "Unexpected end of stream" in error_msg or "EOF" in error_msg:
+                raise Exception("PDF file appears to be corrupted or incomplete. Please try with a different PDF.")
+            elif "not a PDF" in error_msg.lower():
+                raise Exception("File is not a valid PDF. Please upload a proper PDF bank statement.")
+            else:
+                raise Exception(f"Error extracting text from PDF: {error_msg}")
     
     def parse_bank_statement(self, raw_text: str) -> Dict[str, Any]:
         """Use OpenAI to parse bank statement and extract transactions"""
