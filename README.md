@@ -123,6 +123,32 @@ For production deployment, I recommend using:
 - **Render**: Free tier with PostgreSQL addon
 - **Heroku**: Classic PaaS with PostgreSQL addon
 
+### Render Deployment (Recommended)
+
+1. **Create PostgreSQL Database**:
+   - Go to https://dashboard.render.com/new/postgres
+   - Create a new database (free tier available)
+   - Copy the **Internal Database URL**
+
+2. **Create Web Service**:
+   - Go to https://dashboard.render.com/new/web
+   - Connect your GitHub repository
+   - Use these settings:
+     ```
+     Runtime: Python
+     Build Command: pip install -r requirements.txt
+     Start Command: python bot.py
+     ```
+
+3. **Set Environment Variables**:
+   ```
+   TELEGRAM_BOT_TOKEN=your_bot_token_from_botfather
+   OPENAI_API_KEY=your_openai_api_key
+   DATABASE_URL=internal_postgres_url_from_step_1
+   ```
+
+4. **Deploy**
+
 ### Railway Deployment
 
 1. **Connect your GitHub repo to Railway**
