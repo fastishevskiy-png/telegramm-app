@@ -1,10 +1,12 @@
-import pypdf
 import openai
 import json
-import re
+import base64
+import io
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
+from pdf2image import convert_from_path
+from PIL import Image
 
 from config import Config
 
@@ -23,76 +25,127 @@ class PDFParser:
     def __init__(self):
         self.client = openai.OpenAI(api_key=Config.OPENAI_API_KEY)
     
-    def extract_text_from_pdf(self, pdf_path: str) -> str:
-        """Extract text content from PDF file"""
+    def convert_pdf_to_images(self, pdf_path: str) -> List[Image.Image]:
+        """Convert PDF pages to images for OpenAI Vision processing"""
         try:
-            with open(pdf_path, 'rb') as file:
-                pdf_reader = pypdf.PdfReader(file)
-                text = ""
-                
-                # Check if PDF is encrypted
-                if pdf_reader.is_encrypted:
-                    raise Exception("PDF is password protected. Please provide an unencrypted PDF.")
-                
-                # Extract text from all pages
-                for page_num, page in enumerate(pdf_reader.pages):
-                    try:
-                        page_text = page.extract_text()
-                        if page_text.strip():  # Only add non-empty pages
-                            text += page_text + "\n"
-                    except Exception as page_error:
-                        # Log page error but continue with other pages
-                        print(f"Warning: Could not extract text from page {page_num + 1}: {page_error}")
-                        continue
-                
-                # Check if we extracted any text
-                if not text.strip():
-                    raise Exception("No readable text found in PDF. This might be a scanned document or image-only PDF.")
-                
-                return text.strip()
-                
+            # Convert PDF to images (300 DPI for good quality)
+            images = convert_from_path(pdf_path, dpi=300)
+            return images
         except Exception as e:
-            # Provide more helpful error messages
+            raise Exception(f"Error converting PDF to images: {str(e)}")
+    
+    def encode_image_to_base64(self, image: Image.Image) -> str:
+        """Convert PIL Image to base64 string for OpenAI API"""
+        buffer = io.BytesIO()
+        image.save(buffer, format="PNG")
+        image_bytes = buffer.getvalue()
+        return base64.b64encode(image_bytes).decode('utf-8')
+    
+    def analyze_page_with_vision(self, image: Image.Image, page_num: int) -> str:
+        """Use OpenAI Vision to analyze a single page"""
+        try:
+            base64_image = self.encode_image_to_base64(image)
+            
+            response = self.client.chat.completions.create(
+                model="gpt-4o",  # Use GPT-4 with vision
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text", 
+                                "text": f"""This is page {page_num} of a bank statement. Please extract ALL text content from this page exactly as it appears. 
+                                
+Pay special attention to:
+- Account activity sections starting with "ACCOUNT ACTIVITY"
+- Transaction data with columns: date, merchant/description, amount
+- Any line starting with "TOTAL interest for this period"
+                                
+Please provide the complete text content of this page."""
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/png;base64,{base64_image}"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                max_tokens=4000,
+                temperature=0.1
+            )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            raise Exception(f"Error analyzing page {page_num} with OpenAI Vision: {str(e)}")
+    
+    def extract_text_from_pdf(self, pdf_path: str) -> str:
+        """Extract text from PDF using OpenAI Vision API"""
+        try:
+            # Convert PDF to images
+            images = self.convert_pdf_to_images(pdf_path)
+            
+            if not images:
+                raise Exception("No pages found in PDF")
+            
+            # Analyze each page with OpenAI Vision
+            all_text = ""
+            for i, image in enumerate(images, 1):
+                page_text = self.analyze_page_with_vision(image, i)
+                all_text += f"\n=== PAGE {i} ===\n{page_text}\n"
+            
+            return all_text.strip()
+            
+        except Exception as e:
             error_msg = str(e)
-            if "Unexpected end of stream" in error_msg or "EOF" in error_msg:
-                raise Exception("PDF file appears to be corrupted or incomplete. Please try with a different PDF.")
-            elif "not a PDF" in error_msg.lower():
-                raise Exception("File is not a valid PDF. Please upload a proper PDF bank statement.")
+            if "poppler" in error_msg.lower():
+                raise Exception("PDF processing error: poppler-utils not installed. Please contact support.")
             else:
-                raise Exception(f"Error extracting text from PDF: {error_msg}")
+                raise Exception(f"Error processing PDF with OpenAI Vision: {error_msg}")
     
     def parse_bank_statement(self, raw_text: str) -> Dict[str, Any]:
         """Use OpenAI to parse bank statement and extract transactions"""
         
         system_prompt = """
-        You are a bank statement parser. Extract transaction data from bank statements and return structured JSON.
+        You are a specialized bank statement parser. Extract transaction data from the provided bank statement text.
+        
+        IMPORTANT: Focus on data starting from page 3 with the line "ACCOUNT ACTIVITY".
+        
+        Transaction format to look for:
+        - Each transaction has: date of transaction, merchant name/transaction description, $ amount
+        - Transactions are listed line by line after "ACCOUNT ACTIVITY"
+        - Stop processing when you reach a line starting with "TOTAL interest for this period"
         
         For each transaction, extract:
-        - date (YYYY-MM-DD format)
-        - description (clean merchant/transaction description)
-        - amount (negative for debits, positive for credits)
-        - balance (if available)
-        - category (guess based on description: groceries, utilities, entertainment, transport, etc.)
+        - date (convert to YYYY-MM-DD format)
+        - description (merchant name or transaction description exactly as shown)
+        - amount (negative for debits/expenses, positive for credits/deposits)
+        - category (categorize based on merchant: groceries, gas, dining, utilities, etc.)
         
         Return JSON in this exact format:
         {
             "account_info": {
                 "account_number": "masked account number if found",
-                "bank_name": "bank name if identifiable",
+                "bank_name": "bank name if identifiable", 
                 "statement_period": "date range if found"
             },
             "transactions": [
                 {
                     "date": "2024-01-15",
-                    "description": "GROCERY STORE PURCHASE",
+                    "description": "MERCHANT NAME OR DESCRIPTION",
                     "amount": -45.67,
-                    "balance": 1234.56,
                     "category": "groceries"
                 }
             ]
         }
         
-        Only include actual transactions, not headers or summary information.
+        Rules:
+        - Only extract transactions from the ACCOUNT ACTIVITY section starting from page 3
+        - Stop at "TOTAL interest for this period"
+        - Include ALL transactions found in that section
+        - Use negative amounts for expenses/debits, positive for deposits/credits
         """
         
         user_prompt = f"""
@@ -103,7 +156,7 @@ class PDFParser:
         
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o",  # Use GPT-4o for better understanding
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
