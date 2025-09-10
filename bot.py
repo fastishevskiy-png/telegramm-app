@@ -33,6 +33,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Force new deployment - conflict resolution v2
+
 class BankStatementBot:
     def __init__(self):
         self.pdf_parser = PDFParser()
@@ -360,6 +362,20 @@ def main() -> None:
     
     # Create the Application with better error handling
     application = Application.builder().token(Config.TELEGRAM_BOT_TOKEN).build()
+    
+    # Clear any existing webhooks to prevent conflicts
+    async def clear_webhook():
+        try:
+            await application.bot.delete_webhook(drop_pending_updates=True)
+            logger.info("Webhook cleared successfully")
+        except Exception as e:
+            logger.warning(f"Could not clear webhook: {e}")
+    
+    import asyncio
+    try:
+        asyncio.run(clear_webhook())
+    except Exception as e:
+        logger.warning(f"Webhook clearing failed: {e}")
     
     # Add handlers
     application.add_handler(CommandHandler("start", bot.start))
