@@ -363,7 +363,7 @@ def main() -> None:
     # Create the Application with better error handling
     application = Application.builder().token(Config.TELEGRAM_BOT_TOKEN).build()
     
-    # Clear any existing webhooks to prevent conflicts (will be done when bot starts)
+    # Force clear webhooks - must be done before polling starts
     
     # Add handlers
     application.add_handler(CommandHandler("start", bot.start))
@@ -371,17 +371,25 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.Document.PDF, bot.handle_document))
     application.add_handler(CallbackQueryHandler(bot.handle_callback_query))
     
-    # Run the bot with error handling for conflicts
+    # Run the bot with enhanced conflict handling
     try:
         logger.info("Starting Bank Statement Bot...")
+        logger.info("If you see 'Conflict' errors, please stop any local bot instances first!")
+        
+        # Enhanced polling with longer timeout and conflict resolution
         application.run_polling(
             allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=True  # Drop any pending updates to avoid conflicts
+            drop_pending_updates=True,  # Drop any pending updates to avoid conflicts
+            timeout=60,  # Longer timeout
+            bootstrap_retries=3,  # Retry connection
+            poll_interval=1.0  # Poll every second
         )
     except Exception as e:
         if "Conflict" in str(e):
-            logger.error("Bot instance conflict detected. This usually resolves automatically in 1-2 minutes.")
-            logger.error("If the issue persists, check if another bot instance is running.")
+            logger.error("🚨 BOT INSTANCE CONFLICT DETECTED!")
+            logger.error("📱 Please check if you have a local bot running on your computer and STOP it!")
+            logger.error("💻 Check: VSCode terminals, Command Prompt, or any Python processes running bot.py")
+            logger.error("⏱️  If no local bot is running, this should resolve in 1-2 minutes automatically.")
         else:
             logger.error(f"Error running bot: {e}")
         raise
